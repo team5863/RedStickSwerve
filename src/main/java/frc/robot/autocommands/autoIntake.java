@@ -12,9 +12,9 @@ public class autoIntake extends SequentialCommandGroup{
     public autoIntake(Intake m_intake, FeedWheel m_feedwheel){
         addCommands(
             new ParallelDeadlineGroup(
-                new WaitCommand(1),
+                new WaitCommand(2),
                     new IntakeControl(m_intake, -0.3),
-                    new FeedControl(m_feedwheel, 0.5)
+                    new FeedControl(m_feedwheel, 0.4)
                     )
                 );
     }

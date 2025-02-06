@@ -4,13 +4,19 @@
 
 package frc.robot;
 
-import com.pathplanner.lib.commands.FollowPathCommand;
-
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.CvSink;
+import edu.wpi.first.cscore.CvSource;
+import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import com.revrobotics.CANSparkMax;
-import com.revrobotics.CANSparkLowLevel.MotorType;
+import frc.robot.subsystems.SwerveDriveTrain;
+
+import org.opencv.core.Mat;
+
+import com.pathplanner.lib.commands.FollowPathCommand;
+import com.pathplanner.lib.commands.PathfindingCommand;
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
  * each mode, as described in the TimedRobot documentation. If you change the name of this class or
@@ -21,7 +27,9 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
   private RobotContainer m_robotContainer;
-  
+
+  Thread m_visionThread;
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -31,8 +39,43 @@ public class Robot extends TimedRobot {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();
-  
     FollowPathCommand.warmupCommand().schedule();
+    PathfindingCommand.warmupCommand().schedule();
+
+     m_visionThread =
+        new Thread(
+            () -> {
+              UsbCamera camera = CameraServer.startAutomaticCapture(0);
+              camera.setResolution(80, 60);
+
+              // Get a CvSink. This will capture Mats from the camera
+              CvSink cvSink = CameraServer.getVideo();
+              // Setup a CvSource. This will send images back to the Dashboard
+              CvSource outputStream = CameraServer.putVideo("Rectangle", 640, 480);
+              //Lower Res, Higher Hertz To fix
+              //680 480
+              Mat output = new Mat();
+
+              // This cannot be 'true'.  The program will never exit if it is. This
+              // lets the robot stop this thread when restarting robot code or
+              // deploying.
+              while (!Thread.interrupted()) {
+                // Tell the CvSink to grab a frame from the camera and put it
+                // in the source mat.  If there is an error notify the output.
+                if (cvSink.grabFrame(output) == 0) {
+                  // Send the output the error.
+                  outputStream.notifyError(cvSink.getError());
+                  // skip the rest of the current iteration
+                  continue;
+                }
+                // Give the output stream a new image to display
+                outputStream.putFrame(output);
+              }
+            });
+
+    m_visionThread.setDaemon(true);
+    m_visionThread.start();  
+  
   }
 
   /**
@@ -62,6 +105,7 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    //SwerveDriveTrain.returnAlliance();
 
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {
@@ -86,9 +130,7 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {
-  //  m_ColorSensor.getColors(m_ColorSensor.getSensor().getRed(), m_ColorSensor.getSensor().getBlue(), m_ColorSensor.getSensor().getGreen(), m_ColorSensor.getSensor().getProximity());
-  }
+  public void teleopPeriodic() {}
 
   @Override
   public void testInit() {
@@ -98,9 +140,7 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during test mode. */
   @Override
-  public void testPeriodic() {
-    
-  }
+  public void testPeriodic() {}
 
   /** This function is called once when the robot is first started up. */
   @Override

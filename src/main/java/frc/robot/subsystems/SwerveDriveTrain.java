@@ -12,20 +12,32 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import frc.robot.Constants;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+//import com.pathplanner.lib.path.PathConstraints;
+//import com.pathplanner.lib.path.PathPlannerTrajectory;
 import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
+import com.pathplanner.lib.util.PathPlannerLogging;
 import com.pathplanner.lib.util.ReplanningConfig;
+
+import static edu.wpi.first.units.Units.Volts;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import edu.wpi.first.units.MutableMeasure;
+import edu.wpi.first.units.Voltage;
+import edu.wpi.first.units.Measure;
 
 public class SwerveDriveTrain extends SubsystemBase {
   /** Creates a new SwerveDriveTrain. */
 
+  
   private final SwerveModule FrontLeft = new SwerveModule(
     Constants.FrontLeftModule.driveID, Constants.FrontLeftModule.angleID, Constants.FrontLeftModule.encoderID,
     Constants.FrontLeftModule.driveMotorReversed, Constants.FrontLeftModule.angleMotorReversed,
@@ -46,13 +58,19 @@ public class SwerveDriveTrain extends SubsystemBase {
     Constants.BackRightModule.driveMotorReversed, Constants.BackRightModule.angleMotorReversed,
     Constants.BackRightModule.absoluteEncoderOffset, Constants.BackRightModule.absoluteEncoderReversed);
   
+  private Field2d field = new Field2d();
 
   private final Pigeon2 gyro = new Pigeon2(Constants.SwerveConstants.gyroPort);
   private final SwerveDriveOdometry odometer = new SwerveDriveOdometry(Constants.SwerveConstants.DriveKinematics,
-            new Rotation2d(0), new SwerveModulePosition[] {
+            new Rotation2d(), new SwerveModulePosition[] {
               FrontLeft.getPosition(), FrontRight.getPosition(),
               BackLeft.getPosition(), BackRight.getPosition()
             });
+MutableMeasure<Voltage> voltage = MutableMeasure.mutable(Volts.of(0));
+
+final  SysIdRoutine routine = new SysIdRoutine(
+            new SysIdRoutine.Config(),
+            new SysIdRoutine.Mechanism(this::voltageDrive, this::voltageLog, this));
 
   public SwerveDriveTrain() {
         new Thread( () -> {
@@ -69,8 +87,8 @@ public class SwerveDriveTrain extends SubsystemBase {
             this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
             this::pathPlannerRobotDrive, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
             new HolonomicPathFollowerConfig( // HolonomicPathFollowerConfig, this should likely live in your Constants class
-                    new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
-                    new PIDConstants(5.0, 0.0, 0.0), // Rotation PID constants
+                    new PIDConstants(Constants.SwerveConstants.drivekP, Constants.SwerveConstants.drivekI, Constants.SwerveConstants.drivekD), // Translation PID constants
+                    new PIDConstants(Constants.SwerveConstants.anglekP, Constants.SwerveConstants.anglekI, Constants.SwerveConstants.anglekD), // Rotation PID constants
                     3, // Max module speed, in m/s
                     0.4, // Drive base radius in meters. Distance from robot center to furthest module.
                     new ReplanningConfig() // Default path replanning config. See the API for the options here
@@ -80,7 +98,7 @@ public class SwerveDriveTrain extends SubsystemBase {
               // This will flip the path being followed to the red side of the field.
               // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
 
-              var alliance = DriverStation.getAlliance();
+            var alliance = DriverStation.getAlliance();
               if (alliance.isPresent()) {
                 return alliance.get() == DriverStation.Alliance.Red;
               }
@@ -88,9 +106,62 @@ public class SwerveDriveTrain extends SubsystemBase {
             },
             this // Reference to this subsystem to set requirements
     );
-  }
+
+    PathPlannerLogging.setLogCurrentPoseCallback((poses) -> field.setRobotPose(poses));
+
+    PathPlannerLogging.setLogTargetPoseCallback((poses) -> field.getObject("target pose"));
+
+    PathPlannerLogging.setLogActivePathCallback((poses) -> field.getObject("path"));
+            SmartDashboard.putData("field", field);
+ }
 
 
+   /*public static final PathConstraints DEFAULT_FOLLOW_CONSTRAINTS =
+      new PathConstraints(0.5, 0.5, 0.5, 0.5);
+    public static PathPlannerTrajectory loadFileConstrainedTrajectory(String ppfile, PathConstraints dfault){
+      PathConstraints p = PathPlanner.getConstraintsFromPath(ppfile);
+      return PathPlanner.loadPath(ppfile, p ==null ? dfault : p);
+    }
+    public static PathPlannerTrajectory loadFileConstrainedTrajectory(String ppfile){
+      return loadFileConstrainedTrajectory(ppfile, DEFAULT_FOLLOW_CONSTRAINTS);
+    }
+  
+}*/
+
+public void voltageDrive(Measure<Voltage> volts) {
+    FrontLeft.driveMotor.setVoltage(volts.in(Volts));
+    FrontRight.driveMotor.setVoltage(volts.in(Volts));
+    BackLeft.driveMotor.setVoltage(volts.in(Volts));
+    BackRight.driveMotor.setVoltage(volts.in(Volts));
+   }
+public void voltageLog(SysIdRoutineLog log) {
+  log.motor("Front Left")
+    .voltage(voltage.mut_replace(
+      FrontLeft.driveMotor.get() * RobotController.getBatteryVoltage(),
+      Volts
+    ));
+    log.motor("Front Right")
+    .voltage(voltage.mut_replace(
+      FrontRight.driveMotor.get() * RobotController.getBatteryVoltage(),
+      Volts
+    ));
+    log.motor("Back Left")
+    .voltage(voltage.mut_replace(
+      BackLeft.driveMotor.get() * RobotController.getBatteryVoltage(),
+      Volts
+    ));
+    log.motor("Back Right")
+    .voltage(voltage.mut_replace(
+      BackRight.driveMotor.get() * RobotController.getBatteryVoltage(),
+      Volts
+    ));
+}
+public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+  return routine.quasistatic(direction);
+}
+public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+  return routine.dynamic(direction);
+}
   public void zeroHeading() {
     gyro.setYaw(0);
   }
@@ -99,6 +170,15 @@ public class SwerveDriveTrain extends SubsystemBase {
 
     gyro.setYaw(startRotation);
   }
+
+  public static boolean returnAlliance(){
+     var alliance = DriverStation.getAlliance();
+              if (alliance.isPresent()) {
+                return alliance.get() == DriverStation.Alliance.Red;
+              }
+              return false;
+            }
+  
 
   public double getHeading() {
 
@@ -157,10 +237,10 @@ public class SwerveDriveTrain extends SubsystemBase {
     BackLeft.setDesiredState(desiredStates[2]);
     BackRight.setDesiredState(desiredStates[3]);
 
-    SmartDashboard.putNumber("FrontLeftModule", (desiredStates[0].speedMetersPerSecond / Constants.SwerveConstants.maxSpeed));
+    /*SmartDashboard.putNumber("FrontLeftModule", (desiredStates[0].speedMetersPerSecond / Constants.SwerveConstants.maxSpeed));
     SmartDashboard.putNumber("FrontRightModule", (desiredStates[1].speedMetersPerSecond / Constants.SwerveConstants.maxSpeed));
     SmartDashboard.putNumber("BackLeftModule", (desiredStates[2].speedMetersPerSecond / Constants.SwerveConstants.maxSpeed));
-    SmartDashboard.putNumber("BackRightModule", (desiredStates[3].speedMetersPerSecond / Constants.SwerveConstants.maxSpeed));
+    SmartDashboard.putNumber("BackRightModule", (desiredStates[3].speedMetersPerSecond / Constants.SwerveConstants.maxSpeed));*/
   }
 
   @Override
@@ -172,13 +252,12 @@ public class SwerveDriveTrain extends SubsystemBase {
             }
           );
     SmartDashboard.putNumber( "Robot Heading", getHeading());
-    SmartDashboard.putNumber( "Target Angle_FL", FrontLeft.m_anglePidController.getSetpoint());
-    SmartDashboard.putNumber("Angle in Radians_FL", FrontLeft.getAnglePosition());
-    SmartDashboard.putNumber("Target Angle_FR", FrontRight.m_anglePidController.getSetpoint());
-    SmartDashboard.putNumber("Angle in Radians_FR", FrontRight.getAbsolutePosition());
-    SmartDashboard.putString("Robot Location", getPose().getTranslation().toString());
-    SmartDashboard.putNumber("Target Velocity", FrontLeft.m_drivePidController.getSetpoint());
-    SmartDashboard.putNumber(" Robot Velocity", FrontLeft.getDriveVelocity());
+    SmartDashboard.putNumber("FL_angleError", FrontLeft.m_anglePidController.getPositionError());
+    SmartDashboard.putNumber("FL_Position", FrontLeft.getAnglePosition());
+    SmartDashboard.putNumber("SetPoint", FrontLeft.m_anglePidController.getSetpoint());
+    SmartDashboard.putNumber("FR_angleError", FrontRight.m_anglePidController.getPositionError());
+    SmartDashboard.putNumber("BL_angleError", BackLeft.m_anglePidController.getPositionError());
+    SmartDashboard.putNumber("BR_angleError", BackRight.m_anglePidController.getPositionError());
     //SmartDashboard.putNumber("driveEncoderRPM2MeterPerSec", Constants.SwerveConstants.driveEncoderRPM2MeterPerSec);
     //SmartDashboard.putNumber("angleEncoderRPM2RadPerSec", Constants.SwerveConstants.angleEncoderRPM2RadPerSec);
   }

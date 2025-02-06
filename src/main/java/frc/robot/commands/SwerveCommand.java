@@ -7,11 +7,9 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.SwerveDriveTrain;
 import java.util.function.Supplier;
-import java.util.function.BooleanSupplier;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 
 public class SwerveCommand extends Command {
@@ -43,9 +41,9 @@ public class SwerveCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    double xSpeed = getXspeed.get();
-    double ySpeed = getYspeed.get();
-    double rotationSpeed = getRotation.get();
+    double xSpeed = -getXspeed.get();
+    double ySpeed = -getYspeed.get();
+    double rotationSpeed = -getRotation.get();
 
     xSpeed = Math.abs(xSpeed) > Constants.OIConstants.deadband ? xSpeed : 0.0;
         ySpeed = Math.abs(ySpeed) > Constants.OIConstants.deadband ? ySpeed : 0.0;

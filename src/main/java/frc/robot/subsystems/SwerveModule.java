@@ -19,8 +19,8 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.ctre.phoenix6.hardware.CANcoder;
 public class SwerveModule extends SubsystemBase {
   /** Creates a new SwerveModule. */
-   private final CANSparkMax driveMotor;
-   private final CANSparkMax angleMotor;
+   public final CANSparkMax driveMotor;
+   public final CANSparkMax angleMotor;
    private final boolean absoluteEncoderReversed;
    private final double absoluteEncoderOffsetRad;
    
@@ -29,7 +29,7 @@ public class SwerveModule extends SubsystemBase {
    private final RelativeEncoder m_angleEncoder;
    private final CANcoder m_absoluteEncoder;
 
-   public  final PIDController m_anglePidController,
+   public final PIDController m_anglePidController,
                                m_drivePidController;
 
   public SwerveModule(int driveMotorID, int angleMotorID, int encoderID, boolean driveMotorReversed, boolean angleMotorReversed,
@@ -61,7 +61,7 @@ public class SwerveModule extends SubsystemBase {
                                                Constants.SwerveConstants.anglekD
                                               );
 
-      m_anglePidController.setTolerance(0.01);
+      m_anglePidController.setTolerance(0.008);
       
       m_drivePidController = new PIDController(Constants.SwerveConstants.drivekP,
                                                Constants.SwerveConstants.drivekI,
@@ -135,7 +135,7 @@ public void setDesiredState( SwerveModuleState state) {
   state = SwerveModuleState.optimize(state, getState().angle);
   //driveMotor.set(m_drivePidController.calculate(getDriveVelocity(), state.speedMetersPerSecond));
   driveMotor.set(-state.speedMetersPerSecond / Constants.SwerveConstants.maxSpeed);
-  angleMotor.set(m_anglePidController.calculate(getAnglePosition(), state.angle.getRadians()));
+  angleMotor.setVoltage(m_anglePidController.calculate(getAnglePosition(), state.angle.getRadians()));
   
  
   
@@ -149,8 +149,8 @@ public void stop() {
   public void periodic() {
     
    m_angleEncoder.setPosition(getAbsolutePosition());
-    SmartDashboard.getNumber("anglePIDAngle", m_anglePidController.getVelocityError());
-    SmartDashboard.getNumber("anglePIDPosition", m_anglePidController.getPositionError());
+   
+   
   
    
   }

@@ -1,5 +1,6 @@
 package frc.robot.autocommands;
 
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.ParallelDeadlineGroup;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
@@ -21,11 +22,14 @@ public class limeSpeakerShoot extends SequentialCommandGroup{
                     () -> false
                 )
             ),
-
-                new ParallelDeadlineGroup(
-                    new WaitCommand(0.3),
-                    new SpeakerShoot(m_shooter, -1.0, m_serialize, -0.9),
-                    new FeedControl(m_feedwheel, 0.3)
+            
+            new ParallelDeadlineGroup(
+                new WaitCommand(0.3),
+                new SpeakerShoot(m_shooter, -1.0, m_serialize, 0.0)),
+            new ParallelDeadlineGroup(
+                new WaitCommand(0.8),
+                new SpeakerShoot(m_shooter, -1.0, m_serialize, -0.9),
+                new FeedControl(m_feedwheel, 0.3)
                 )
                    
             );

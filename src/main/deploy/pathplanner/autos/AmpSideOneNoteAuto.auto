@@ -1,6 +1,12 @@
 {
   "version": 1.0,
-  "startingPose": null,
+  "startingPose": {
+    "position": {
+      "x": 1.16,
+      "y": 6.59
+    },
+    "rotation": 20.0
+  },
   "command": {
     "type": "sequential",
     "data": {
@@ -12,7 +18,7 @@
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 3.0
+                  "waitTime": 7.0
                 }
               },
               {
@@ -20,14 +26,14 @@
                 "data": {
                   "name": "SpeakerShoot"
                 }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "PathToFirstHalfLineNote"
+                }
               }
             ]
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "OneNoteLeave"
           }
         }
       ]

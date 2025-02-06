@@ -11,6 +11,7 @@ public class IntakeControl extends Command {
     public IntakeControl(Intake m_intake, Double speed){
         this.m_intake = m_intake;
         this.speed = speed;
+        
         addRequirements(m_intake);
     }
 

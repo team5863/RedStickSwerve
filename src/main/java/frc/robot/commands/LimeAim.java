@@ -41,42 +41,79 @@ public class LimeAim extends Command {
   @Override
   public void initialize() {}
 
-  double kPLimeLightAim(){    
+  double AngleLimeLightAim(){    
       double kP = .016554;
       double targetingAngularVelocity = LimelightHelpers.getTX("limelight") * kP;
   
       targetingAngularVelocity *= Constants.AutoConstants.kMaxAngularSpeedRadiansPerSecond;
   
-      targetingAngularVelocity *= -1.0;
+      targetingAngularVelocity *= 1.0;
   
       return targetingAngularVelocity;
+      
+  }
+
+   double HorizontalLimeLightAim(){    
+      double kP = 0.0045863;
+      double HorizontalTargettingValue = LimelightHelpers.getTX("limelight") * kP;
+
+      HorizontalTargettingValue *= Constants.SwerveConstants.maxSpeed;
+
+      HorizontalTargettingValue *= 1.0;
+
+      HorizontalTargettingValue += +0.305863;
+  
+     return HorizontalTargettingValue;      
+  }
+
+  double VerticalLimeLightAim(){    
+      double kP = 0.025863;
+      double VerticalLimeLightAim = LimelightHelpers.getTY("limelight") * kP;
+
+      VerticalLimeLightAim *= Constants.SwerveConstants.maxSpeed;
+
+      VerticalLimeLightAim *= 1.0;
+
+      VerticalLimeLightAim += -1.60;
+  
+  
+     return VerticalLimeLightAim;
       
   }
 
   @Override
   public void execute() {
 
-    double xSpeed = getXspeed.get();
-    double ySpeed = getYspeed.get();
+    double xSpeed = -getXspeed.get();
+    double ySpeed = -getYspeed.get();
     double rotationSpeed = getRotation.get();
 
         xSpeed = Math.abs(xSpeed) > Constants.OIConstants.limelightdeadband ? xSpeed : 0.0;
         ySpeed = Math.abs(ySpeed) > Constants.OIConstants.limelightdeadband ? ySpeed : 0.0;
         rotationSpeed = Math.abs(rotationSpeed) > Constants.OIConstants.limelightdeadband ? rotationSpeed : 0.0;
 
-        xSpeed = xLimiter.calculate(xSpeed) * Constants.SwerveConstants.maxSpeed;
-        ySpeed = yLimiter.calculate(ySpeed) * Constants.SwerveConstants.maxSpeed;
-        
-
   
     ChassisSpeeds chassisSpeeds;
 
-      if(LimelightHelpers.getTV("limelight") == true){
-        rotationSpeed = -kPLimeLightAim();
+      /*if(LimelightHelpers.getTV("limelight") == true){
+        rotationSpeed = -AngleLimeLightAim();
       }else{
         rotationSpeed = rotationLimiter.calculate(rotationSpeed)
         * Constants.SwerveConstants.DriveMaxAngularAccelerationUnitsPerSecond;
+      }*/
+
+      if(LimelightHelpers.getTV("limelight") == true && LimelightHelpers.getFiducialID("limelight") == 4 || LimelightHelpers.getFiducialID("limelight") == 7){
+        ySpeed = HorizontalLimeLightAim();
+      }else{
+        ySpeed = yLimiter.calculate(ySpeed) * Constants.SwerveConstants.maxSpeed;
       }
+
+     if(LimelightHelpers.getTV("limelight") == true && LimelightHelpers.getFiducialID("limelight") == 4 || LimelightHelpers.getFiducialID("limelight") == 7){
+        xSpeed = VerticalLimeLightAim();
+      }else{
+        xSpeed = xLimiter.calculate(xSpeed) * Constants.SwerveConstants.maxSpeed;
+      }
+
             // Relative to robot
         chassisSpeeds = new ChassisSpeeds(xSpeed, ySpeed, rotationSpeed);
 

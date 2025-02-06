@@ -4,9 +4,9 @@
 
 package frc.robot.subsystems;
 
-import com.revrobotics.ColorSensorV3;
+//import com.revrobotics.ColorSensorV3;
 //import edu.wpi.first.wpilibj.I2C;
-import edu.wpi.first.wpilibj.I2C.Port;
+//import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 //import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -24,8 +24,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
   @Override
   public void periodic()  {
-
-    SmartDashboard.putNumber("Proximity:", ColorSensor.getProximity());
     
   }
 }
